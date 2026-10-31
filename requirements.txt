@@ -4,3 +4,6 @@ psycopg[binary]
 python-dotenv
 pytest
 httpx
+pwdlib[argon2]
+pyjwt
+email-validator
