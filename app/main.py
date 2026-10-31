@@ -4,12 +4,23 @@ import psycopg
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from app.routes import books
+from app.api.routes import books
+from app.domain.exceptions import BookNotFoundError, InvalidBookError
 
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Book Management System")
 app.include_router(books.router)
+
+
+@app.exception_handler(BookNotFoundError)
+async def book_not_found(request: Request, exc: BookNotFoundError):
+    return JSONResponse(status_code=404, content={"detail": "Book not found"})
+
+
+@app.exception_handler(InvalidBookError)
+async def invalid_book(request: Request, exc: InvalidBookError):
+    return JSONResponse(status_code=422, content={"detail": str(exc)})
 
 
 # Database is unreachable: tell the client without revealing details

@@ -1,8 +1,11 @@
 import pytest
 from fastapi.testclient import TestClient
 
+from app.api.dependencies import get_book_repository
+from app.domain.entities.book import Book
+from app.domain.exceptions import InvalidBookError
+from app.domain.repositories.book_repository import BookRepository
 from app.main import app
-from app.models import book as book_model
 
 client = TestClient(app)
 
@@ -17,38 +20,46 @@ def sample_book():
     }
 
 
-# A fake in-memory database, so the tests never touch Neon
-@pytest.fixture(autouse=True)
-def fake_db(monkeypatch):
-    books = {}
-    counter = {"next_id": 1}
+# A fake in-memory repository, so the tests never touch Neon
+class FakeBookRepository(BookRepository):
+    def __init__(self):
+        self.books = {}
+        self.next_id = 1
 
-    def create_book(book):
-        new = {"id": counter["next_id"], **book.model_dump()}
-        books[new["id"]] = new
-        counter["next_id"] += 1
-        return new
+    def create(self, book):
+        book.id = self.next_id
+        self.books[book.id] = book
+        self.next_id += 1
+        return book
 
-    def get_all_books():
-        return list(books.values())
+    def get_all(self):
+        return list(self.books.values())
 
-    def get_book(book_id):
-        return books.get(book_id)
+    def get_by_id(self, book_id):
+        return self.books.get(book_id)
 
-    def update_book(book_id, book):
-        if book_id not in books:
+    def update(self, book_id, book):
+        if book_id not in self.books:
             return None
-        books[book_id] = {"id": book_id, **book.model_dump()}
-        return books[book_id]
+        book.id = book_id
+        self.books[book_id] = book
+        return book
 
-    def delete_book(book_id):
-        return books.pop(book_id, None) is not None
+    def delete(self, book_id):
+        return self.books.pop(book_id, None) is not None
 
-    monkeypatch.setattr(book_model, "create_book", create_book)
-    monkeypatch.setattr(book_model, "get_all_books", get_all_books)
-    monkeypatch.setattr(book_model, "get_book", get_book)
-    monkeypatch.setattr(book_model, "update_book", update_book)
-    monkeypatch.setattr(book_model, "delete_book", delete_book)
+
+@pytest.fixture(autouse=True)
+def fake_db():
+    repo = FakeBookRepository()
+    app.dependency_overrides[get_book_repository] = lambda: repo
+    yield
+    app.dependency_overrides.clear()
+
+
+def test_book_entity_rejects_negative_price():
+    with pytest.raises(InvalidBookError):
+        Book(title="X", author="Y", price=-1)
 
 
 def test_create_book():
