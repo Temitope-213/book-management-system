@@ -2,7 +2,7 @@ CREATE TABLE books (
     id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     title VARCHAR(200) NOT NULL,
     author VARCHAR(150) NOT NULL,
-    published_year INTEGER,
+    publication_year INTEGER,
     price NUMERIC(10, 2) NOT NULL CHECK (price >= 0),
     available BOOLEAN NOT NULL DEFAULT TRUE
 );
