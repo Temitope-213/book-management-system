@@ -4,12 +4,18 @@ import psycopg
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from app.api.routes import books
-from app.domain.exceptions import BookNotFoundError, InvalidBookError
+from app.api.routes import auth, books
+from app.domain.exceptions import (
+    BookNotFoundError,
+    EmailAlreadyExistsError,
+    InvalidBookError,
+    InvalidCredentialsError,
+)
 
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Book Management System")
+app.include_router(auth.router)
 app.include_router(books.router)
 
 
@@ -21,6 +27,22 @@ async def book_not_found(request: Request, exc: BookNotFoundError):
 @app.exception_handler(InvalidBookError)
 async def invalid_book(request: Request, exc: InvalidBookError):
     return JSONResponse(status_code=422, content={"detail": str(exc)})
+
+
+@app.exception_handler(EmailAlreadyExistsError)
+async def email_exists(request: Request, exc: EmailAlreadyExistsError):
+    return JSONResponse(
+        status_code=409, content={"detail": "Email is already registered"}
+    )
+
+
+@app.exception_handler(InvalidCredentialsError)
+async def invalid_credentials(request: Request, exc: InvalidCredentialsError):
+    return JSONResponse(
+        status_code=401,
+        content={"detail": "Incorrect email or password"},
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
 
 # Database is unreachable: tell the client without revealing details
