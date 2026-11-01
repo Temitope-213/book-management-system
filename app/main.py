@@ -4,7 +4,7 @@ import psycopg
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from app.api.routes import auth, books
+from app.api.routes import auth, books, admin
 from app.domain.exceptions import (
     BookNotFoundError,
     EmailAlreadyExistsError,
@@ -12,11 +12,14 @@ from app.domain.exceptions import (
     InvalidCredentialsError,
 )
 
+
+
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Book Management System")
 app.include_router(auth.router)
 app.include_router(books.router)
+app.include_router(admin.router)
 
 
 @app.exception_handler(BookNotFoundError)
